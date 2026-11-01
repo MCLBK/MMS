@@ -110,4 +110,11 @@ jobs:
         run: docker build -f infrastructure/Dockerfile.backend -t mms-backend:test ./backend
 
       - name: Build frontend image
-        run: docker build -f infrastructure/Dockerfile.frontend -t mms-frontend:test ./frontend-web
+        run: |
+          set +e
+          docker build --progress=plain -f infrastructure/Dockerfile.frontend -t mms-frontend:test ./frontend-web 2>&1 | tee /tmp/docker-frontend.log
+          RESULT=${PIPESTATUS[0]}
+          if [ $RESULT -ne 0 ]; then
+            echo "::error::DOCKER FRONTEND BUILD FAILED: $(tail -5 /tmp/docker-frontend.log | tr '\n' ' /// ')"
+          fi
+          exit $RESULT
