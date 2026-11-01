@@ -1,0 +1,37 @@
+databases:
+  - name: mms-postgres
+    plan: free
+    databaseName: mms_express
+    user: mms_user
+
+services:
+  - type: web
+    name: mms-backend
+    plan: free
+    runtime: python
+    region: frankfurt
+    rootDir: backend
+    buildCommand: pip install -e . && alembic upgrade head && python -m scripts.seed_render
+    startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mms-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FIRST_ADMIN_EMAIL
+        value: admin@mmsexpress.com
+      - key: FIRST_ADMIN_PASSWORD
+        sync: false
+      - key: REDIS_URL
+        value: ""
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+    healthCheckPath: /api/health

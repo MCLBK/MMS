@@ -119,7 +119,13 @@ export function useWebSocket({
   return { isConnected, on, send };
 }
 
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+function getWsBase() {
+  if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
+  if (typeof window === "undefined") return "ws://localhost:8000";
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}`;
+}
+const WS_BASE = getWsBase();
 
 export function useNotificationSocket(userId: string | undefined, companyId: string | undefined) {
   const url = userId

@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     DATABASE_URL: str = "postgresql+asyncpg://mms_user:mms_password@localhost:5432/mms_express"
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = ""
 
     SECRET_KEY: str = "change-me-to-a-random-64-char-string"
     JWT_ALGORITHM: str = "HS256"
@@ -20,14 +20,32 @@ class Settings(BaseSettings):
     FIRST_ADMIN_PASSWORD: str = "Admin123!"
 
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "mistral"
+    OLLAMA_MODEL: str = "llama3.2:3b"
 
     GPS_UPDATE_INTERVAL_SECONDS: int = 10
     GPS_MAX_HISTORY_DAYS: int = 30
 
     @property
+    def database_url_async(self) -> str:
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
+    @property
+    def database_url_sync(self) -> str:
+        url = self.DATABASE_URL
+        if "+asyncpg" in url:
+            url = url.replace("+asyncpg", "", 1)
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+
+    @property
     def cors_origins_list(self) -> list[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

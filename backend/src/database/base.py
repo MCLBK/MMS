@@ -46,10 +46,10 @@ class UUIDMixin:
 
 
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.database_url_async,
     echo=settings.DEBUG,
-    pool_size=20,
-    max_overflow=10,
+    pool_size=5,
+    max_overflow=5,
 )
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
