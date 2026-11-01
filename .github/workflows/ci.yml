@@ -61,15 +61,16 @@ jobs:
 
       - name: Run tests
         run: |
+          set +e
           pytest -v --tb=long 2>&1 | tee test-output.txt
-          exit ${PIPESTATUS[0]}
-
-      - name: Upload test output
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-output
-          path: backend/test-output.txt
+          RESULT=${PIPESTATUS[0]}
+          if [ $RESULT -ne 0 ]; then
+            echo "## Backend Test Failure" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -100 test-output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          exit $RESULT
 
   frontend-lint:
     name: Frontend Lint
