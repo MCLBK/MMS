@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "outputDirectory": ".next",
-  "rootDirectory": "frontend-web",
   "rewrites": [
     {
       "source": "/api/:path*",
