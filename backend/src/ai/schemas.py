@@ -18,6 +18,8 @@ class ScoringResult(BaseModel):
 
 
 class ScoringResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     order_id: uuid.UUID
     candidates: list[ScoringResult]
     model_version: str

@@ -51,26 +51,8 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
-      - name: Show versions
-        run: |
-          python --version
-          pip show pytest pytest-asyncio sqlalchemy aiosqlite pydantic-settings
-
-      - name: Verify imports
-        run: python -c "from src.database.base import Base; print('Base import OK')"
-
       - name: Run tests
-        run: |
-          set +e
-          pytest -v --tb=long 2>&1 | tee test-output.txt
-          RESULT=${PIPESTATUS[0]}
-          if [ $RESULT -ne 0 ]; then
-            # Write last 50 lines as annotation errors (visible via API)
-            tail -50 test-output.txt | while IFS= read -r line; do
-              echo "::error::$line"
-            done
-          fi
-          exit $RESULT
+        run: pytest -v --tb=short
 
   frontend-lint:
     name: Frontend Lint
