@@ -51,32 +51,8 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
-      - name: Show key versions
-        run: python -c "import pydantic; import sqlalchemy; print(f'pydantic={pydantic.VERSION} sqlalchemy={sqlalchemy.__version__}')"
-
-      - name: Check imports
-        run: |
-          python -c "
-          import sys
-          try:
-              import src.main
-              print('src.main imported OK')
-          except Exception as e:
-              print(f'::error::IMPORT FAILED: {type(e).__name__}: {e}', flush=True)
-              sys.exit(1)
-          "
-
       - name: Run tests
-        run: |
-          set +e
-          pytest -v --tb=short 2>&1 | tee test-output.txt
-          RESULT=${PIPESTATUS[0]}
-          if [ $RESULT -ne 0 ]; then
-            ERRLINE=$(grep -E "^(E |ERRORS|FAILED|ERROR|.*Error:|.*Exception:)" test-output.txt | tail -5 | tr '\n' ' /// ')
-            echo "::error::TEST FAIL SUMMARY: $ERRLINE"
-            echo "::error::LAST LINES: $(tail -5 test-output.txt | tr '\n' ' /// ')"
-          fi
-          exit $RESULT
+        run: pytest -v --tb=short
 
   frontend-lint:
     name: Frontend Lint
