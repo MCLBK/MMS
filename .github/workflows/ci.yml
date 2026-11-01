@@ -52,7 +52,16 @@ jobs:
         run: pip install -e ".[dev]"
 
       - name: Run tests
-        run: pytest -v --tb=short
+        run: |
+          set +e
+          pytest -v --tb=long 2>&1 | tee test-output.txt
+          RESULT=${PIPESTATUS[0]}
+          if [ $RESULT -ne 0 ]; then
+            tail -80 test-output.txt | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+          fi
+          exit $RESULT
 
   frontend-lint:
     name: Frontend Lint
