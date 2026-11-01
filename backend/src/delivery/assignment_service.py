@@ -4,7 +4,7 @@ Utilise le scoring IA avancé (v2) pour évaluer et classer les candidats.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,7 +42,7 @@ class AssignmentService:
 
         best = candidates[0]
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         assignment = DeliveryAssignment(
             order_id=order.id,
             courier_id=best.courier.id,

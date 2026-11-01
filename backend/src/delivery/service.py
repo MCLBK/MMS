@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,14 +8,17 @@ from src.delivery.models import OrderStatus
 from src.delivery.repository import DeliveryRepository
 from src.delivery.schemas import OrderCreate, OrderUpdate, StatusTransition
 
-
 VALID_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
     OrderStatus.DRAFT: {OrderStatus.PENDING, OrderStatus.CANCELLED},
     OrderStatus.PENDING: {OrderStatus.ANALYZING, OrderStatus.CANCELLED},
     OrderStatus.ANALYZING: {OrderStatus.READY_TO_ASSIGN, OrderStatus.CANCELLED},
     OrderStatus.READY_TO_ASSIGN: {OrderStatus.ASSIGNING, OrderStatus.CANCELLED},
     OrderStatus.ASSIGNING: {OrderStatus.ASSIGNED, OrderStatus.EXPIRED, OrderStatus.CANCELLED},
-    OrderStatus.ASSIGNED: {OrderStatus.COURIER_ACCEPTED, OrderStatus.COURIER_REFUSED, OrderStatus.EXPIRED},
+    OrderStatus.ASSIGNED: {
+        OrderStatus.COURIER_ACCEPTED,
+        OrderStatus.COURIER_REFUSED,
+        OrderStatus.EXPIRED,
+    },
     OrderStatus.COURIER_ACCEPTED: {OrderStatus.PICKUP_IN_PROGRESS, OrderStatus.CANCELLED},
     OrderStatus.PICKUP_IN_PROGRESS: {OrderStatus.PICKED_UP, OrderStatus.DELIVERY_FAILED},
     OrderStatus.PICKED_UP: {OrderStatus.IN_TRANSIT},
@@ -32,7 +35,7 @@ VALID_TRANSITIONS: dict[OrderStatus, set[OrderStatus]] = {
 
 
 def _generate_reference() -> str:
-    ts = datetime.now(timezone.utc).strftime("%y%m%d%H%M")
+    ts = datetime.now(UTC).strftime("%y%m%d%H%M")
     short = uuid.uuid4().hex[:6].upper()
     return f"MMS-{ts}-{short}"
 
@@ -125,9 +128,7 @@ class DeliveryService:
                 detail="Modification impossible apres traitement",
             )
 
-        updated = await self.repo.update_order(
-            order, data.model_dump(exclude_unset=True)
-        )
+        updated = await self.repo.update_order(order, data.model_dump(exclude_unset=True))
         return updated
 
     async def transition_status(

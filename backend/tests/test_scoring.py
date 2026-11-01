@@ -1,16 +1,14 @@
 """Tests unitaires pour le service de scoring IA."""
 
-import math
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock
 
 from src.ai.scoring import (
-    haversine_km,
-    estimate_arrival_min,
+    MODEL_VERSION,
+    WEIGHTS,
     AIScoring,
     ScoringFactors,
-    WEIGHTS,
-    MODEL_VERSION,
+    estimate_arrival_min,
+    haversine_km,
 )
 
 
@@ -131,6 +129,7 @@ class TestScoringCalcLoad:
 
     def test_high_load_low_score(self):
         from src.delivery.models import AssignmentStatus
+
         scoring = AIScoring.__new__(AIScoring)
         courier = MagicMock()
         a1 = MagicMock()

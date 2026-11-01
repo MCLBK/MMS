@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,9 +34,7 @@ class DeliveryRepository:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_order_by_reference(
-        self, reference: str
-    ) -> DeliveryOrder | None:
+    async def get_order_by_reference(self, reference: str) -> DeliveryOrder | None:
         result = await self.db.execute(
             select(DeliveryOrder).where(DeliveryOrder.reference == reference)
         )
@@ -103,7 +102,7 @@ class DeliveryRepository:
         changed_by: uuid.UUID | None = None,
         reason: str | None = None,
     ) -> DeliveryStatusHistory:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         entry = DeliveryStatusHistory(
             order_id=order_id,
@@ -111,7 +110,7 @@ class DeliveryRepository:
             old_status=old_status,
             new_status=new_status,
             reason=reason,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         self.db.add(entry)
         await self.db.flush()

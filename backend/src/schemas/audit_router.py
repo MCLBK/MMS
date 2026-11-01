@@ -1,4 +1,3 @@
-import math
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query

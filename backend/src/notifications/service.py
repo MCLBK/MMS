@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.notifications.repository import NotificationRepository
 
-
 NOTIFICATION_TYPES = {
     "order_created": "Nouvelle commande",
     "order_assigned": "Commande attribuee",
@@ -29,13 +28,15 @@ class NotificationService:
         body: str,
         data: dict | None = None,
     ):
-        return await self.repo.create({
-            "user_id": user_id,
-            "type": type,
-            "title": title,
-            "body": body,
-            "data": data,
-        })
+        return await self.repo.create(
+            {
+                "user_id": user_id,
+                "type": type,
+                "title": title,
+                "body": body,
+                "data": data,
+            }
+        )
 
     async def notify_order_status_change(
         self,

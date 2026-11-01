@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,9 +24,7 @@ class Notification(Base, UUIDMixin):
 
     user: Mapped["User"] = relationship(back_populates="notifications")
 
-    __table_args__ = (
-        Index("ix_notifications_user_unread", "user_id", "is_read", "created_at"),
-    )
+    __table_args__ = (Index("ix_notifications_user_unread", "user_id", "is_read", "created_at"),)
 
 
 from src.users.models import User  # noqa: E402

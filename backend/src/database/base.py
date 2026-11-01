@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, MetaData, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -24,15 +24,15 @@ class Base(DeclarativeBase):
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
-        onupdate=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -45,18 +45,52 @@ class UUIDMixin:
     )
 
 
-engine = create_async_engine(
-    settings.database_url_async,
-    echo=settings.DEBUG,
-    pool_size=5,
-    max_overflow=5,
-)
+_engine = None
+_async_session = None
 
-async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        _engine = create_async_engine(
+            settings.database_url_async,
+            echo=settings.DEBUG,
+            pool_size=5,
+            max_overflow=5,
+        )
+    return _engine
+
+
+def get_async_session():
+    global _async_session
+    if _async_session is None:
+        _async_session = async_sessionmaker(
+            get_engine(), class_=AsyncSession, expire_on_commit=False
+        )
+    return _async_session
+
+
+# Keep backward-compatible names as properties
+class _EngineProxy:
+    def __getattr__(self, name):
+        return getattr(get_engine(), name)
+
+
+class _SessionProxy:
+    def __call__(self, *args, **kwargs):
+        return get_async_session()(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(get_async_session(), name)
+
+
+engine = _EngineProxy()
+async_session = _SessionProxy()
 
 
 async def get_db() -> AsyncSession:  # type: ignore[misc]
-    async with async_session() as session:
+    session_factory = get_async_session()
+    async with session_factory() as session:
         try:
             yield session
             await session.commit()

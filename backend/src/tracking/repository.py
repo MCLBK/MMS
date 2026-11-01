@@ -1,12 +1,12 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.tracking.models import GPSLocation
 from src.delivery.models import CourierProfile
+from src.tracking.models import GPSLocation
 
 
 class TrackingRepository:
@@ -16,7 +16,7 @@ class TrackingRepository:
     async def record_position(self, courier_id: uuid.UUID, data: dict) -> GPSLocation:
         location = GPSLocation(
             courier_id=courier_id,
-            recorded_at=datetime.now(timezone.utc),
+            recorded_at=datetime.now(UTC),
             **data,
         )
         self.db.add(location)
@@ -29,7 +29,7 @@ class TrackingRepository:
         minutes: int = 60,
         limit: int = 500,
     ) -> list[GPSLocation]:
-        since = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+        since = datetime.now(UTC) - timedelta(minutes=minutes)
         stmt = (
             select(GPSLocation)
             .where(
@@ -42,9 +42,7 @@ class TrackingRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_assignment_track(
-        self, assignment_id: uuid.UUID
-    ) -> list[GPSLocation]:
+    async def get_assignment_track(self, assignment_id: uuid.UUID) -> list[GPSLocation]:
         stmt = (
             select(GPSLocation)
             .where(GPSLocation.assignment_id == assignment_id)
@@ -53,9 +51,7 @@ class TrackingRepository:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-    async def get_live_positions(
-        self, company_id: uuid.UUID
-    ) -> list[CourierProfile]:
+    async def get_live_positions(self, company_id: uuid.UUID) -> list[CourierProfile]:
         stmt = (
             select(CourierProfile)
             .options(selectinload(CourierProfile.user))

@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.dependencies import get_current_active_user
 from src.database.base import get_db
 from src.guards.rbac import require_permission
 from src.users.models import User
@@ -51,12 +50,14 @@ async def get_user(
 
     memberships = []
     for m in user.memberships:
-        memberships.append({
-            "company_id": m.company_id,
-            "company_name": m.company.name if m.company else "",
-            "role_name": m.role.name if m.role else "",
-            "is_active": m.is_active,
-        })
+        memberships.append(
+            {
+                "company_id": m.company_id,
+                "company_name": m.company.name if m.company else "",
+                "role_name": m.role.name if m.role else "",
+                "is_active": m.is_active,
+            }
+        )
 
     return UserDetail(
         id=user.id,

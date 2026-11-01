@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from src.schemas.common import BaseSchema
 

@@ -1,13 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.base import get_db
-from src.middlewares.tenant import resolve_tenant
-from src.ai.scoring import AIScoring, MODEL_VERSION
-from src.ai.predictions import PredictionService
 from src.ai.assistant import AIAssistant
+from src.ai.predictions import PredictionService
 from src.ai.schemas import (
     ChatRequest,
     ChatResponse,
@@ -21,8 +18,11 @@ from src.ai.schemas import (
     ScoringResult,
     VolumeForecastItem,
 )
+from src.ai.scoring import MODEL_VERSION, AIScoring
 from src.couriers.repository import CourierRepository
+from src.database.base import get_db
 from src.delivery.repository import DeliveryRepository
+from src.middlewares.tenant import resolve_tenant
 
 router = APIRouter(tags=["AI"])
 
@@ -86,8 +86,10 @@ async def predict_delivery_time(
     svc = PredictionService(db)
     pred = await svc.predict_delivery_time(
         company_id,
-        body.pickup_lat, body.pickup_lng,
-        body.delivery_lat, body.delivery_lng,
+        body.pickup_lat,
+        body.pickup_lng,
+        body.delivery_lat,
+        body.delivery_lng,
         body.priority,
         body.weight_kg,
     )

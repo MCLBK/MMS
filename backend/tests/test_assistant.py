@@ -1,7 +1,8 @@
 """Tests unitaires pour l'assistant IA."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from src.ai.assistant import AIAssistant
 
@@ -42,7 +43,11 @@ class TestTemplateResponses:
 
         resp = await assistant.chat(MagicMock(), "Y a-t-il des problèmes ?")
         assert "3" in resp.message
-        assert "échec" in resp.message.lower() or "erreur" in resp.message.lower() or "réassigner" in resp.message.lower()
+        assert (
+            "échec" in resp.message.lower()
+            or "erreur" in resp.message.lower()
+            or "réassigner" in resp.message.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_optimization_tips(self):

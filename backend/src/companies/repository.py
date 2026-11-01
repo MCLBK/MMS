@@ -22,12 +22,7 @@ class CompanyRepository:
         count_stmt = select(func.count()).select_from(Company)
         total = (await self.db.execute(count_stmt)).scalar() or 0
 
-        stmt = (
-            select(Company)
-            .order_by(Company.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        stmt = select(Company).order_by(Company.created_at.desc()).offset(offset).limit(limit)
         result = await self.db.execute(stmt)
         return list(result.scalars().all()), total
 

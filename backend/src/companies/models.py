@@ -1,7 +1,4 @@
-import uuid
-
-from sqlalchemy import Boolean, JSON, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import JSON, Boolean, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.base import Base, TimestampMixin, UUIDMixin
@@ -29,5 +26,5 @@ class Company(Base, UUIDMixin, TimestampMixin):
     delivery_orders: Mapped[list["DeliveryOrder"]] = relationship(back_populates="company")
 
 
-from src.users.models import CompanyMembership  # noqa: E402
 from src.delivery.models import CourierProfile, Customer, DeliveryOrder  # noqa: E402
+from src.users.models import CompanyMembership  # noqa: E402

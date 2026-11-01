@@ -11,9 +11,7 @@ Modèle multicritère pondéré avec facteurs contextuels :
 """
 
 import math
-import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +23,6 @@ from src.delivery.models import (
     DeliveryOrder,
     OrderPriority,
 )
-
 
 MODEL_VERSION = "scoring-v2.0"
 
@@ -41,12 +38,12 @@ WEIGHTS = {
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    R = 6371.0
+    earth_radius = 6371.0
     rlat1, rlng1, rlat2, rlng2 = (math.radians(x) for x in (lat1, lng1, lat2, lng2))
     dlat = rlat2 - rlat1
     dlng = rlng2 - rlng1
     a = math.sin(dlat / 2) ** 2 + math.cos(rlat1) * math.cos(rlat2) * math.sin(dlng / 2) ** 2
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return earth_radius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def estimate_arrival_min(distance_km: float, vehicle_type: str) -> int:
@@ -135,12 +132,14 @@ class AIScoring:
         )
         f.total_score = round(f.total_score, 4)
 
-        data_points = sum([
-            1 if courier.total_deliveries > 0 else 0,
-            1 if courier.current_lat is not None else 0,
-            1 if f.deliveries_in_zone > 0 else 0,
-            1 if f.on_time_rate > 0 else 0,
-        ])
+        data_points = sum(
+            [
+                1 if courier.total_deliveries > 0 else 0,
+                1 if courier.current_lat is not None else 0,
+                1 if f.deliveries_in_zone > 0 else 0,
+                1 if f.on_time_rate > 0 else 0,
+            ]
+        )
         f.confidence = round(min(0.99, 0.50 + data_points * 0.12), 2)
 
         f.estimated_arrival_min = estimate_arrival_min(
@@ -149,29 +148,30 @@ class AIScoring:
 
         return f
 
-    def _calc_distance(
-        self, courier: CourierProfile, order: DeliveryOrder
-    ) -> tuple[float, float]:
+    def _calc_distance(self, courier: CourierProfile, order: DeliveryOrder) -> tuple[float, float]:
         if courier.current_lat and courier.current_lng and order.pickup_lat and order.pickup_lng:
             dist = haversine_km(
-                float(courier.current_lat), float(courier.current_lng),
-                float(order.pickup_lat), float(order.pickup_lng),
+                float(courier.current_lat),
+                float(courier.current_lng),
+                float(order.pickup_lat),
+                float(order.pickup_lng),
             )
             score = max(0, 1.0 - dist / 25.0)
             return round(dist, 2), round(score, 4)
         return 0.0, 0.5
 
     def _calc_load(self, courier: CourierProfile) -> tuple[int, float]:
-        active = len([
-            a for a in courier.assignments
-            if a.status in (AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
-        ])
+        active = len(
+            [
+                a
+                for a in courier.assignments
+                if a.status in (AssignmentStatus.PENDING, AssignmentStatus.ACCEPTED)
+            ]
+        )
         score = max(0, 1.0 - active * 0.30)
         return active, round(score, 4)
 
-    def _calc_capacity(
-        self, courier: CourierProfile, order: DeliveryOrder
-    ) -> tuple[float, float]:
+    def _calc_capacity(self, courier: CourierProfile, order: DeliveryOrder) -> tuple[float, float]:
         if order.total_weight_kg and courier.max_weight_kg:
             ratio = float(order.total_weight_kg) / float(courier.max_weight_kg)
             if ratio > 1.0:
@@ -210,17 +210,14 @@ class AIScoring:
         if courier.total_deliveries < 3:
             return 0.0, 0.7
 
-        stmt = (
-            select(
-                func.count().label("total"),
-                func.count()
-                .filter(DeliveryAssignment.delivered_at <= DeliveryAssignment.expires_at)
-                .label("on_time"),
-            )
-            .where(
-                DeliveryAssignment.courier_id == courier.id,
-                DeliveryAssignment.status == AssignmentStatus.COMPLETED,
-            )
+        stmt = select(
+            func.count().label("total"),
+            func.count()
+            .filter(DeliveryAssignment.delivered_at <= DeliveryAssignment.expires_at)
+            .label("on_time"),
+        ).where(
+            DeliveryAssignment.courier_id == courier.id,
+            DeliveryAssignment.status == AssignmentStatus.COMPLETED,
         )
         result = await self.db.execute(stmt)
         row = result.one_or_none()
@@ -230,9 +227,7 @@ class AIScoring:
         rate = row.on_time / row.total
         return round(rate, 4), round(rate, 4)
 
-    def _calc_priority_match(
-        self, courier: CourierProfile, order: DeliveryOrder
-    ) -> float:
+    def _calc_priority_match(self, courier: CourierProfile, order: DeliveryOrder) -> float:
         if order.priority == OrderPriority.URGENT:
             speed_rank = {"motorcycle": 1.0, "bicycle": 0.7, "car": 0.8, "van": 0.6, "truck": 0.4}
         elif order.priority == OrderPriority.HIGH:

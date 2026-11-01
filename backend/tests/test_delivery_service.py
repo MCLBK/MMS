@@ -1,10 +1,12 @@
 """Tests unitaires pour le service de livraison."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from src.delivery.service import DeliveryService, VALID_TRANSITIONS
+import pytest
+
 from src.delivery.models import OrderStatus
+from src.delivery.schemas import StatusTransition
+from src.delivery.service import VALID_TRANSITIONS, DeliveryService, _generate_reference
 
 
 class TestValidTransitions:
@@ -21,19 +23,31 @@ class TestValidTransitions:
         assert OrderStatus.ARRIVING in VALID_TRANSITIONS[OrderStatus.IN_TRANSIT]
 
     def test_completed_is_terminal(self):
-        assert OrderStatus.COMPLETED not in VALID_TRANSITIONS or \
-               len(VALID_TRANSITIONS.get(OrderStatus.COMPLETED, [])) == 0
+        assert (
+            OrderStatus.COMPLETED not in VALID_TRANSITIONS
+            or len(VALID_TRANSITIONS.get(OrderStatus.COMPLETED, [])) == 0
+        )
 
     def test_all_statuses_have_entry(self):
         non_terminal = {
-            OrderStatus.DRAFT, OrderStatus.PENDING, OrderStatus.ANALYZING,
-            OrderStatus.READY_TO_ASSIGN, OrderStatus.ASSIGNING, OrderStatus.ASSIGNED,
-            OrderStatus.COURIER_ACCEPTED, OrderStatus.PICKUP_IN_PROGRESS,
-            OrderStatus.PICKED_UP, OrderStatus.IN_TRANSIT, OrderStatus.ARRIVING,
-            OrderStatus.DELIVERED, OrderStatus.CONFIRMED,
-            OrderStatus.COURIER_REFUSED, OrderStatus.EXPIRED,
-            OrderStatus.DELIVERY_FAILED, OrderStatus.CANCELLED,
-            OrderStatus.DISPUTED, OrderStatus.UNDER_REVIEW,
+            OrderStatus.DRAFT,
+            OrderStatus.PENDING,
+            OrderStatus.ANALYZING,
+            OrderStatus.READY_TO_ASSIGN,
+            OrderStatus.ASSIGNING,
+            OrderStatus.ASSIGNED,
+            OrderStatus.COURIER_ACCEPTED,
+            OrderStatus.PICKUP_IN_PROGRESS,
+            OrderStatus.PICKED_UP,
+            OrderStatus.IN_TRANSIT,
+            OrderStatus.ARRIVING,
+            OrderStatus.DELIVERED,
+            OrderStatus.CONFIRMED,
+            OrderStatus.COURIER_REFUSED,
+            OrderStatus.EXPIRED,
+            OrderStatus.DELIVERY_FAILED,
+            OrderStatus.DISPUTED,
+            OrderStatus.UNDER_REVIEW,
         }
         for status in non_terminal:
             assert status in VALID_TRANSITIONS, f"{status} missing from VALID_TRANSITIONS"
@@ -41,8 +55,7 @@ class TestValidTransitions:
 
 class TestReferenceGeneration:
     def test_reference_format(self):
-        svc = DeliveryService.__new__(DeliveryService)
-        ref = svc._generate_reference()
+        ref = _generate_reference()
         assert ref.startswith("MMS-")
         assert len(ref) > 10
         parts = ref.split("-")
@@ -61,13 +74,17 @@ class TestTransitionValidation:
         order.id = MagicMock()
         order.status = OrderStatus.DRAFT
         order.company_id = MagicMock()
+        user_id = MagicMock()
         svc.repo.get_order_by_id = AsyncMock(return_value=order)
 
-        with pytest.raises(ValueError, match="Transition"):
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException):
             await svc.transition_status(
                 order.id,
                 order.company_id,
-                OrderStatus.DELIVERED.value,
+                user_id,
+                StatusTransition(new_status=OrderStatus.DELIVERED),
             )
 
     @pytest.mark.asyncio
@@ -80,13 +97,15 @@ class TestTransitionValidation:
         order.id = MagicMock()
         order.status = OrderStatus.DRAFT
         order.company_id = MagicMock()
+        user_id = MagicMock()
         svc.repo.get_order_by_id = AsyncMock(return_value=order)
         svc.repo.add_status_history = AsyncMock()
 
-        result = await svc.transition_status(
+        await svc.transition_status(
             order.id,
             order.company_id,
-            OrderStatus.PENDING.value,
+            user_id,
+            StatusTransition(new_status=OrderStatus.PENDING),
         )
 
         assert order.status == OrderStatus.PENDING

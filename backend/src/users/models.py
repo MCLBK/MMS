@@ -2,14 +2,14 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Table, Text, Column
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.base import Base, TimestampMixin, UUIDMixin
 
 
-class SystemRole(str, enum.Enum):
+class SystemRole(enum.StrEnum):
     SUPER_ADMIN = "super_admin"
     COMPANY_ADMIN = "company_admin"
     COURIER = "courier"
@@ -20,8 +20,15 @@ role_permissions = Table(
     "role_permissions",
     Base.metadata,
     Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
-    Column("role_id", UUID(as_uuid=True), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False),
-    Column("permission_id", UUID(as_uuid=True), ForeignKey("permissions.id", ondelete="CASCADE"), nullable=False),
+    Column(
+        "role_id", UUID(as_uuid=True), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False
+    ),
+    Column(
+        "permission_id",
+        UUID(as_uuid=True),
+        ForeignKey("permissions.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
 )
 
 
@@ -65,7 +72,9 @@ class User(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("roles.id"), nullable=True
     )
 
-    global_role: Mapped["Role | None"] = relationship(lazy="selectin", foreign_keys=[global_role_id])
+    global_role: Mapped["Role | None"] = relationship(
+        lazy="selectin", foreign_keys=[global_role_id]
+    )
     memberships: Mapped[list["CompanyMembership"]] = relationship(
         back_populates="user", lazy="selectin"
     )
@@ -86,7 +95,9 @@ class User(Base, UUIDMixin, TimestampMixin):
 
     @property
     def is_super_admin(self) -> bool:
-        return (self.global_role is not None and self.global_role.name == SystemRole.SUPER_ADMIN.value)
+        return (
+            self.global_role is not None and self.global_role.name == SystemRole.SUPER_ADMIN.value
+        )
 
 
 class CompanyMembership(Base, UUIDMixin):
@@ -102,9 +113,7 @@ class CompanyMembership(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("roles.id"), nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="memberships")
     company: Mapped["Company"] = relationship(back_populates="memberships")

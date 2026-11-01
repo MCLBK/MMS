@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ class NotificationRepository:
         self.db = db
 
     async def create(self, data: dict) -> Notification:
-        notif = Notification(**data, created_at=datetime.now(timezone.utc))
+        notif = Notification(**data, created_at=datetime.now(UTC))
         self.db.add(notif)
         await self.db.flush()
         return notif
@@ -27,9 +27,9 @@ class NotificationRepository:
         base = select(Notification).where(Notification.user_id == user_id)
 
         unread_stmt = select(func.count()).select_from(
-            select(Notification).where(
-                Notification.user_id == user_id, Notification.is_read.is_(False)
-            ).subquery()
+            select(Notification)
+            .where(Notification.user_id == user_id, Notification.is_read.is_(False))
+            .subquery()
         )
         unread_count = (await self.db.execute(unread_stmt)).scalar() or 0
 

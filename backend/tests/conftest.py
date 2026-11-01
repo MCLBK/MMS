@@ -5,12 +5,14 @@ ce qui évite de dépendre de PostgreSQL pour le CI.
 """
 
 import asyncio
+import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -39,21 +41,23 @@ async def engine():
 
 @pytest_asyncio.fixture
 async def db_session(engine):
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
+    async_session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with async_session_factory() as session:
         yield session
         await session.rollback()
 
 
 @pytest_asyncio.fixture
 async def client():
-    from src.main import app
     from src.database.base import get_db
+    from src.main import app
 
     async def override_get_db():
         yield None
 
     app.dependency_overrides[get_db] = override_get_db
+
+    from httpx import ASGITransport, AsyncClient
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -67,4 +71,4 @@ def make_uuid() -> uuid.UUID:
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

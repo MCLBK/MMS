@@ -4,11 +4,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.couriers.repository import CourierRepository
 from src.database.base import get_db
+from src.middlewares.tenant import TenantContext, resolve_tenant
 from src.tracking.repository import TrackingRepository
 from src.tracking.schemas import CourierPosition, GPSLocationCreate, GPSLocationResponse
-from src.middlewares.tenant import TenantContext, resolve_tenant
-from src.couriers.repository import CourierRepository
 
 router = APIRouter()
 

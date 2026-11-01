@@ -7,17 +7,15 @@ Fonctionnalités :
   - Score de risque d'échec de livraison
 """
 
-import math
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import case, cast, Date, func, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.delivery.models import (
     AssignmentStatus,
-    CourierProfile,
     DeliveryAssignment,
     DeliveryOrder,
     OrderPriority,
@@ -76,13 +74,14 @@ class PredictionService:
 
         if pickup_lat and pickup_lng and delivery_lat and delivery_lng:
             from src.ai.scoring import haversine_km
+
             distance = haversine_km(pickup_lat, pickup_lng, delivery_lat, delivery_lng)
             distance_minutes = distance * 3.0
         else:
             distance = 0.0
             distance_minutes = 15.0
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         hour = now.hour
         if 7 <= hour <= 9 or 17 <= hour <= 19:
             traffic_factor = 1.4
@@ -91,9 +90,7 @@ class PredictionService:
         else:
             traffic_factor = 1.0
 
-        priority_factor = {"urgent": 0.8, "high": 0.9, "normal": 1.0, "low": 1.1}.get(
-            priority, 1.0
-        )
+        priority_factor = {"urgent": 0.8, "high": 0.9, "normal": 1.0, "low": 1.1}.get(priority, 1.0)
 
         weight_factor = 1.0
         if weight_kg and weight_kg > 30:
@@ -105,7 +102,9 @@ class PredictionService:
         if historical_avg:
             base_minutes = (base_minutes + historical_avg) / 2
 
-        estimated = (base_minutes + distance_minutes) * traffic_factor * priority_factor * weight_factor
+        estimated = (
+            (base_minutes + distance_minutes) * traffic_factor * priority_factor * weight_factor
+        )
         estimated = max(10, round(estimated))
 
         data_points = sum([1 if distance > 0 else 0, 1 if historical_avg else 0, 1])
@@ -135,7 +134,7 @@ class PredictionService:
             )
             .where(
                 DeliveryOrder.company_id == company_id,
-                DeliveryOrder.created_at >= datetime.now(timezone.utc) - timedelta(days=30),
+                DeliveryOrder.created_at >= datetime.now(UTC) - timedelta(days=30),
             )
             .group_by("day")
             .order_by("day")
@@ -146,7 +145,7 @@ class PredictionService:
         if not rows:
             return [
                 VolumeForecast(
-                    date=(datetime.now(timezone.utc) + timedelta(days=i)).strftime("%Y-%m-%d"),
+                    date=(datetime.now(UTC) + timedelta(days=i)).strftime("%Y-%m-%d"),
                     predicted_orders=0,
                     confidence=0.3,
                     trend="stable",
@@ -173,7 +172,7 @@ class PredictionService:
 
         forecasts = []
         for i in range(1, days_ahead + 1):
-            target_date = datetime.now(timezone.utc) + timedelta(days=i)
+            target_date = datetime.now(UTC) + timedelta(days=i)
             dow = target_date.weekday()
             base = dow_avg.get(dow, avg)
             predicted = max(0, round(base * trend_factor))
@@ -192,18 +191,15 @@ class PredictionService:
     async def detect_hot_zones(
         self, company_id: uuid.UUID, days: int = 7, grid_size: float = 0.02
     ) -> list[HotZone]:
-        since = datetime.now(timezone.utc) - timedelta(days=days)
-        stmt = (
-            select(
-                DeliveryOrder.delivery_lat,
-                DeliveryOrder.delivery_lng,
-            )
-            .where(
-                DeliveryOrder.company_id == company_id,
-                DeliveryOrder.created_at >= since,
-                DeliveryOrder.delivery_lat.isnot(None),
-                DeliveryOrder.delivery_lng.isnot(None),
-            )
+        since = datetime.now(UTC) - timedelta(days=days)
+        stmt = select(
+            DeliveryOrder.delivery_lat,
+            DeliveryOrder.delivery_lng,
+        ).where(
+            DeliveryOrder.company_id == company_id,
+            DeliveryOrder.created_at >= since,
+            DeliveryOrder.delivery_lat.isnot(None),
+            DeliveryOrder.delivery_lng.isnot(None),
         )
         result = await self.db.execute(stmt)
         points = [(float(r.delivery_lat), float(r.delivery_lng)) for r in result.all()]
@@ -265,16 +261,19 @@ class PredictionService:
             factors.append("Contient des articles fragiles")
             recommendations.append("Sélectionner un livreur avec note >= 4.5")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if now.hour >= 18 or now.hour < 6:
             risk += 0.10
             factors.append("Livraison en horaire tardif/nocturne")
 
         if order.pickup_lat and order.pickup_lng and order.delivery_lat and order.delivery_lng:
             from src.ai.scoring import haversine_km
+
             dist = haversine_km(
-                float(order.pickup_lat), float(order.pickup_lng),
-                float(order.delivery_lat), float(order.delivery_lng),
+                float(order.pickup_lat),
+                float(order.pickup_lng),
+                float(order.delivery_lat),
+                float(order.delivery_lng),
             )
             if dist > 15:
                 risk += 0.12
@@ -288,7 +287,14 @@ class PredictionService:
             recommendations.append("Contacter le client pour confirmer l'adresse")
 
         risk = min(1.0, risk)
-        level = "critical" if risk >= 0.6 else "high" if risk >= 0.4 else "medium" if risk >= 0.2 else "low"
+        if risk >= 0.6:
+            level = "critical"
+        elif risk >= 0.4:
+            level = "high"
+        elif risk >= 0.2:
+            level = "medium"
+        else:
+            level = "low"
 
         if not recommendations:
             recommendations.append("Aucune action spéciale requise")
@@ -304,7 +310,11 @@ class PredictionService:
         stmt = (
             select(
                 func.avg(
-                    func.extract("epoch", DeliveryAssignment.delivered_at - DeliveryAssignment.assigned_at) / 60
+                    func.extract(
+                        "epoch",
+                        DeliveryAssignment.delivered_at - DeliveryAssignment.assigned_at,
+                    )
+                    / 60
                 )
             )
             .join(DeliveryOrder, DeliveryAssignment.order_id == DeliveryOrder.id)
@@ -325,21 +335,22 @@ class PredictionService:
             return None
         lat, lng = float(order.delivery_lat), float(order.delivery_lng)
         radius = 0.02
-        stmt = (
-            select(
-                func.count().label("total"),
-                func.count().filter(
-                    DeliveryOrder.status.in_([
+        stmt = select(
+            func.count().label("total"),
+            func.count()
+            .filter(
+                DeliveryOrder.status.in_(
+                    [
                         OrderStatus.DELIVERY_FAILED,
                         OrderStatus.CANCELLED,
-                    ])
-                ).label("failed"),
+                    ]
+                )
             )
-            .where(
-                DeliveryOrder.company_id == company_id,
-                DeliveryOrder.delivery_lat.between(lat - radius, lat + radius),
-                DeliveryOrder.delivery_lng.between(lng - radius, lng + radius),
-            )
+            .label("failed"),
+        ).where(
+            DeliveryOrder.company_id == company_id,
+            DeliveryOrder.delivery_lat.between(lat - radius, lat + radius),
+            DeliveryOrder.delivery_lng.between(lng - radius, lng + radius),
         )
         result = await self.db.execute(stmt)
         row = result.one_or_none()

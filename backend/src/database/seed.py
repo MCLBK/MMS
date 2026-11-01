@@ -1,55 +1,87 @@
 """Seed initial roles, permissions, and the first super admin."""
 
-from datetime import datetime, timezone
-
 from sqlalchemy import select
 
 from src.core.config import settings
 from src.core.security import hash_password
 from src.database.base import async_session
-from src.users.models import CompanyMembership, Permission, Role, SystemRole, User, role_permissions
-
+from src.users.models import Permission, Role, SystemRole, User
 
 PERMISSIONS = [
-    ("users", "read"), ("users", "create"), ("users", "update"), ("users", "delete"),
-    ("companies", "read"), ("companies", "create"), ("companies", "update"), ("companies", "delete"),
-    ("orders", "read"), ("orders", "create"), ("orders", "update"), ("orders", "delete"),
-    ("couriers", "read"), ("couriers", "create"), ("couriers", "update"), ("couriers", "delete"),
-    ("assignments", "read"), ("assignments", "create"), ("assignments", "update"),
-    ("tracking", "read"), ("tracking", "create"),
+    ("users", "read"),
+    ("users", "create"),
+    ("users", "update"),
+    ("users", "delete"),
+    ("companies", "read"),
+    ("companies", "create"),
+    ("companies", "update"),
+    ("companies", "delete"),
+    ("orders", "read"),
+    ("orders", "create"),
+    ("orders", "update"),
+    ("orders", "delete"),
+    ("couriers", "read"),
+    ("couriers", "create"),
+    ("couriers", "update"),
+    ("couriers", "delete"),
+    ("assignments", "read"),
+    ("assignments", "create"),
+    ("assignments", "update"),
+    ("tracking", "read"),
+    ("tracking", "create"),
     ("analytics", "read"),
-    ("notifications", "read"), ("notifications", "create"),
+    ("notifications", "read"),
+    ("notifications", "create"),
     ("audit", "read"),
-    ("chat", "read"), ("chat", "create"),
-    ("settings", "read"), ("settings", "update"),
+    ("chat", "read"),
+    ("chat", "create"),
+    ("settings", "read"),
+    ("settings", "update"),
 ]
 
 ROLE_PERMS = {
     SystemRole.SUPER_ADMIN: "*",
     SystemRole.COMPANY_ADMIN: [
-        ("users", "read"), ("users", "create"), ("users", "update"),
-        ("companies", "read"), ("companies", "update"),
-        ("orders", "read"), ("orders", "create"), ("orders", "update"), ("orders", "delete"),
-        ("couriers", "read"), ("couriers", "create"), ("couriers", "update"),
-        ("assignments", "read"), ("assignments", "create"), ("assignments", "update"),
+        ("users", "read"),
+        ("users", "create"),
+        ("users", "update"),
+        ("companies", "read"),
+        ("companies", "update"),
+        ("orders", "read"),
+        ("orders", "create"),
+        ("orders", "update"),
+        ("orders", "delete"),
+        ("couriers", "read"),
+        ("couriers", "create"),
+        ("couriers", "update"),
+        ("assignments", "read"),
+        ("assignments", "create"),
+        ("assignments", "update"),
         ("tracking", "read"),
         ("analytics", "read"),
-        ("notifications", "read"), ("notifications", "create"),
-        ("chat", "read"), ("chat", "create"),
-        ("settings", "read"), ("settings", "update"),
+        ("notifications", "read"),
+        ("notifications", "create"),
+        ("chat", "read"),
+        ("chat", "create"),
+        ("settings", "read"),
+        ("settings", "update"),
     ],
     SystemRole.COURIER: [
         ("orders", "read"),
-        ("assignments", "read"), ("assignments", "update"),
-        ("tracking", "read"), ("tracking", "create"),
+        ("assignments", "read"),
+        ("assignments", "update"),
+        ("tracking", "read"),
+        ("tracking", "create"),
         ("notifications", "read"),
-        ("chat", "read"), ("chat", "create"),
+        ("chat", "read"),
+        ("chat", "create"),
     ],
     SystemRole.CUSTOMER: [
         ("orders", "read"),
         ("tracking", "read"),
         ("notifications", "read"),
-        ("chat", "read"), ("chat", "create"),
+        ("chat", "read"),
+        ("chat", "create"),
     ],
 }
 
@@ -69,7 +101,8 @@ async def seed_roles_and_admin() -> None:
         await session.flush()
 
         for role_name in SystemRole:
-            role = Role(name=role_name.value, description=role_name.value.replace("_", " ").title(), is_system=True)
+            desc = role_name.value.replace("_", " ").title()
+            role = Role(name=role_name.value, description=desc, is_system=True)
             session.add(role)
             await session.flush()
 

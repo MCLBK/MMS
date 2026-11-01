@@ -1,15 +1,13 @@
 """Tests unitaires pour le service de prédictions."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone
 
 from src.ai.predictions import (
     DeliveryTimePrediction,
-    VolumeForecast,
-    HotZone,
-    RiskAssessment,
     PredictionService,
+    RiskAssessment,
 )
 from src.delivery.models import OrderPriority
 
@@ -59,14 +57,18 @@ class TestDeliveryTimePrediction:
 
         normal = await svc.predict_delivery_time(
             company_id=MagicMock(),
-            pickup_lat=5.35, pickup_lng=-4.02,
-            delivery_lat=5.38, delivery_lng=-3.98,
+            pickup_lat=5.35,
+            pickup_lng=-4.02,
+            delivery_lat=5.38,
+            delivery_lng=-3.98,
             priority="normal",
         )
         urgent = await svc.predict_delivery_time(
             company_id=MagicMock(),
-            pickup_lat=5.35, pickup_lng=-4.02,
-            delivery_lat=5.38, delivery_lng=-3.98,
+            pickup_lat=5.35,
+            pickup_lng=-4.02,
+            delivery_lat=5.38,
+            delivery_lng=-3.98,
             priority="urgent",
         )
 

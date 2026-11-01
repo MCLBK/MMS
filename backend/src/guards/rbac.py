@@ -1,13 +1,12 @@
 """RBAC decorators and dependency factories for route protection."""
 
 import uuid
-from functools import wraps
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
 from src.core.dependencies import get_current_active_user
-from src.users.models import SystemRole, User
+from src.users.models import User
 
 
 def require_role(*roles: str):

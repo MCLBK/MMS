@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 from src.delivery.models import OrderPriority, OrderStatus
 
-
 # ─── Items ───────────────────────────────────────────────────
+
 
 class DeliveryItemCreate(BaseModel):
     description: str = Field(..., min_length=1, max_length=300)
@@ -28,6 +28,7 @@ class DeliveryItemResponse(BaseModel):
 
 
 # ─── Customer (inline) ───────────────────────────────────────
+
 
 class CustomerCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
@@ -52,6 +53,7 @@ class CustomerResponse(BaseModel):
 
 
 # ─── Orders ──────────────────────────────────────────────────
+
 
 class OrderCreate(BaseModel):
     customer_id: uuid.UUID | None = None

@@ -15,7 +15,6 @@ from src.couriers.schemas import (
 from src.database.base import get_db
 from src.delivery.models import CourierStatus
 from src.middlewares.tenant import TenantContext, resolve_tenant
-from src.users.models import User
 
 router = APIRouter()
 
@@ -94,10 +93,12 @@ async def create_courier_profile(
             detail="Ce livreur a deja un profil dans cette entreprise",
         )
 
-    profile = await repo.create({
-        "company_id": tenant.company_id,
-        **data.model_dump(),
-    })
+    profile = await repo.create(
+        {
+            "company_id": tenant.company_id,
+            **data.model_dump(),
+        }
+    )
     await db.commit()
     refreshed = await repo.get_by_id(profile.id, tenant.company_id)
     return _to_detail(refreshed)

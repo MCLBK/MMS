@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +31,7 @@ class AuditService:
             details=details,
             ip_address=ip_address,
             user_agent=user_agent,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         self.db.add(entry)
         await self.db.flush()

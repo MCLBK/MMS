@@ -3,14 +3,13 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Enum,
     ForeignKey,
     Integer,
-    JSON,
     Numeric,
-    SmallInteger,
     String,
     Text,
 )
@@ -19,10 +18,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.base import Base, TimestampMixin, UUIDMixin
 
-
 # ─── Enums ────────────────────────────────────────────────────
 
-class VehicleType(str, enum.Enum):
+
+class VehicleType(enum.StrEnum):
     BICYCLE = "bicycle"
     MOTORCYCLE = "motorcycle"
     CAR = "car"
@@ -30,13 +29,13 @@ class VehicleType(str, enum.Enum):
     TRUCK = "truck"
 
 
-class CourierStatus(str, enum.Enum):
+class CourierStatus(enum.StrEnum):
     AVAILABLE = "available"
     BUSY = "busy"
     OFFLINE = "offline"
 
 
-class OrderStatus(str, enum.Enum):
+class OrderStatus(enum.StrEnum):
     DRAFT = "draft"
     PENDING = "pending"
     ANALYZING = "analyzing"
@@ -60,14 +59,14 @@ class OrderStatus(str, enum.Enum):
     RESOLVED = "resolved"
 
 
-class OrderPriority(str, enum.Enum):
+class OrderPriority(enum.StrEnum):
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"
     URGENT = "urgent"
 
 
-class AssignmentStatus(str, enum.Enum):
+class AssignmentStatus(enum.StrEnum):
     PENDING = "pending"
     ACCEPTED = "accepted"
     REFUSED = "refused"
@@ -76,25 +75,26 @@ class AssignmentStatus(str, enum.Enum):
     FAILED = "failed"
 
 
-class ProofType(str, enum.Enum):
+class ProofType(enum.StrEnum):
     PHOTO = "photo"
     SIGNATURE = "signature"
     CODE = "code"
 
 
-class ConfirmationSource(str, enum.Enum):
+class ConfirmationSource(enum.StrEnum):
     COURIER = "courier"
     CUSTOMER = "customer"
     SYSTEM = "system"
 
 
-class ConfirmationStatus(str, enum.Enum):
+class ConfirmationStatus(enum.StrEnum):
     CONFIRMED = "confirmed"
     DISPUTED = "disputed"
     PARTIAL = "partial"
 
 
 # ─── Models ───────────────────────────────────────────────────
+
 
 class CourierProfile(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "courier_profiles"
@@ -103,7 +103,10 @@ class CourierProfile(Base, UUIDMixin, TimestampMixin):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
     )
     company_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     vehicle_type: Mapped[VehicleType] = mapped_column(
         Enum(VehicleType, name="vehicle_type"), default=VehicleType.MOTORCYCLE
@@ -116,7 +119,10 @@ class CourierProfile(Base, UUIDMixin, TimestampMixin):
     )
     current_lat: Mapped[float | None] = mapped_column(Numeric(10, 7), nullable=True)
     current_lng: Mapped[float | None] = mapped_column(Numeric(10, 7), nullable=True)
-    last_position_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_position_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     rating: Mapped[float] = mapped_column(Numeric(3, 2), default=5.0)
     total_deliveries: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -131,7 +137,10 @@ class Customer(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "customers"
 
     company_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -150,7 +159,10 @@ class DeliveryOrder(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "delivery_orders"
 
     company_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     customer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False
@@ -177,12 +189,16 @@ class DeliveryOrder(Base, UUIDMixin, TimestampMixin):
     total_volume_m3: Mapped[float | None] = mapped_column(Numeric(8, 3), nullable=True)
     estimated_distance_km: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     estimated_duration_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    requested_delivery_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    requested_delivery_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     special_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     company: Mapped["Company"] = relationship(back_populates="delivery_orders")
     customer: Mapped["Customer"] = relationship(back_populates="delivery_orders")
-    items: Mapped[list["DeliveryItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    items: Mapped[list["DeliveryItem"]] = relationship(
+        back_populates="order", cascade="all, delete-orphan"
+    )
     assignments: Mapped[list["DeliveryAssignment"]] = relationship(back_populates="order")
     status_history: Mapped[list["DeliveryStatusHistory"]] = relationship(
         back_populates="order", order_by="DeliveryStatusHistory.created_at"
@@ -215,7 +231,9 @@ class DeliveryAssignment(Base, UUIDMixin):
         UUID(as_uuid=True), ForeignKey("courier_profiles.id"), nullable=False, index=True
     )
     status: Mapped[AssignmentStatus] = mapped_column(
-        Enum(AssignmentStatus, name="assignment_status"), default=AssignmentStatus.PENDING, index=True
+        Enum(AssignmentStatus, name="assignment_status"),
+        default=AssignmentStatus.PENDING,
+        index=True,
     )
     assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -235,7 +253,10 @@ class DeliveryStatusHistory(Base, UUIDMixin):
     __tablename__ = "delivery_status_history"
 
     order_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("delivery_orders.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("delivery_orders.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     changed_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
@@ -253,7 +274,9 @@ class DeliveryProof(Base, UUIDMixin):
     __tablename__ = "delivery_proofs"
 
     assignment_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("delivery_assignments.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("delivery_assignments.id", ondelete="CASCADE"),
+        nullable=False,
     )
     type: Mapped[ProofType] = mapped_column(Enum(ProofType, name="proof_type"), nullable=False)
     file_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -270,7 +293,9 @@ class DeliveryConfirmation(Base, UUIDMixin):
     __tablename__ = "delivery_confirmations"
 
     assignment_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("delivery_assignments.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True),
+        ForeignKey("delivery_assignments.id", ondelete="CASCADE"),
+        nullable=False,
     )
     confirmed_by: Mapped[ConfirmationSource] = mapped_column(
         Enum(ConfirmationSource, name="confirmation_source"), nullable=False
@@ -285,7 +310,7 @@ class DeliveryConfirmation(Base, UUIDMixin):
 
 
 # Forward imports
-from src.users.models import User  # noqa: E402
+from src.ai.models import AIRecommendation  # noqa: E402
 from src.companies.models import Company  # noqa: E402
 from src.tracking.models import GPSLocation  # noqa: E402
-from src.ai.models import AIRecommendation  # noqa: E402
+from src.users.models import User  # noqa: E402

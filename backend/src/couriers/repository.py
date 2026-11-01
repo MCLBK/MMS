@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -77,13 +77,11 @@ class CourierRepository:
     ) -> CourierProfile:
         profile.current_lat = lat
         profile.current_lng = lng
-        profile.last_position_at = datetime.now(timezone.utc)
+        profile.last_position_at = datetime.now(UTC)
         await self.db.flush()
         return profile
 
-    async def get_available_couriers(
-        self, company_id: uuid.UUID
-    ) -> list[CourierProfile]:
+    async def get_available_couriers(self, company_id: uuid.UUID) -> list[CourierProfile]:
         stmt = (
             select(CourierProfile)
             .options(selectinload(CourierProfile.user))

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +44,7 @@ class AuthService:
         if user is None or not verify_password(data.password, user.password_hash):
             raise ValueError("Email ou mot de passe incorrect")
 
-        user.last_login_at = datetime.now(timezone.utc)
+        user.last_login_at = datetime.now(UTC)
         await self.db.flush()
 
         token_data = {"sub": str(user.id), "email": user.email}

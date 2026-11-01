@@ -1,12 +1,13 @@
+import math
 import uuid
 from typing import Annotated
-import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.base import get_db
 from src.delivery.models import OrderStatus
+from src.delivery.repository import DeliveryRepository
 from src.delivery.schemas import (
     CustomerCreate,
     CustomerResponse,
@@ -18,10 +19,7 @@ from src.delivery.schemas import (
     StatusTransition,
 )
 from src.delivery.service import DeliveryService
-from src.delivery.repository import DeliveryRepository
-from src.guards.rbac import require_permission
 from src.middlewares.tenant import TenantContext, resolve_tenant
-from src.users.models import User
 
 router = APIRouter()
 
@@ -52,9 +50,13 @@ def _order_to_detail(order) -> OrderDetail:
         delivery_lat=float(order.delivery_lat) if order.delivery_lat else None,
         delivery_lng=float(order.delivery_lng) if order.delivery_lng else None,
         total_weight_kg=float(order.total_weight_kg) if order.total_weight_kg else None,
-        estimated_distance_km=float(order.estimated_distance_km) if order.estimated_distance_km else None,
+        estimated_distance_km=float(order.estimated_distance_km)
+        if order.estimated_distance_km
+        else None,
         estimated_duration_min=order.estimated_duration_min,
-        requested_delivery_at=order.requested_delivery_at.isoformat() if order.requested_delivery_at else None,
+        requested_delivery_at=order.requested_delivery_at.isoformat()
+        if order.requested_delivery_at
+        else None,
         special_instructions=order.special_instructions,
         customer=CustomerResponse.model_validate(order.customer),
         items=[item for item in order.items],
@@ -64,6 +66,7 @@ def _order_to_detail(order) -> OrderDetail:
 
 
 # ── Orders ────────────────────────────────────────────────────
+
 
 @router.get(
     "/companies/{company_id}/orders",
@@ -162,15 +165,14 @@ async def transition_order_status(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     service = DeliveryService(db)
-    order = await service.transition_status(
-        order_id, tenant.company_id, tenant.user.id, data
-    )
+    order = await service.transition_status(order_id, tenant.company_id, tenant.user.id, data)
     await db.commit()
     refreshed = await DeliveryRepository(db).get_order_by_id(order.id, tenant.company_id)
     return _order_to_detail(refreshed)
 
 
 # ── Customers ─────────────────────────────────────────────────
+
 
 @router.get(
     "/companies/{company_id}/customers",
@@ -200,14 +202,13 @@ async def create_customer(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     repo = DeliveryRepository(db)
-    customer = await repo.create_customer(
-        {"company_id": tenant.company_id, **data.model_dump()}
-    )
+    customer = await repo.create_customer({"company_id": tenant.company_id, **data.model_dump()})
     await db.commit()
     return CustomerResponse.model_validate(customer)
 
 
 # ── Auto-assign ───────────────────────────────────────────────
+
 
 @router.post(
     "/companies/{company_id}/orders/{order_id}/assign",
@@ -223,9 +224,7 @@ async def auto_assign_order(
     service = AssignmentService(db)
     assignment = await service.auto_assign(order_id, tenant.company_id)
     if assignment is None:
-        from fastapi import HTTPException as HE
-
-        raise HE(
+        raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Attribution impossible : aucun livreur disponible ou statut invalide",
         )

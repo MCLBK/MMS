@@ -6,14 +6,12 @@ Fallback : réponses basées sur des templates si Ollama n'est pas disponible.
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.delivery.models import DeliveryOrder, OrderStatus
-
+from src.delivery.models import DeliveryOrder
 
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "llama3.2:3b"
@@ -107,7 +105,10 @@ class AIAssistant:
         )
         result = await self.db.execute(stmt)
         rows = result.all()
-        return {str(r.status.value) if hasattr(r.status, "value") else str(r.status): r.cnt for r in rows}
+        return {
+            str(r.status.value) if hasattr(r.status, "value") else str(r.status): r.cnt
+            for r in rows
+        }
 
     async def _check_ollama(self) -> bool:
         try:
@@ -128,10 +129,12 @@ class AIAssistant:
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
         if context_str:
-            messages.append({
-                "role": "system",
-                "content": f"Contexte actuel de l'entreprise :\n{context_str}",
-            })
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"Contexte actuel de l'entreprise :\n{context_str}",
+                }
+            )
 
         for msg in history[-10:]:
             messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
@@ -151,7 +154,8 @@ class AIAssistant:
                 )
                 if resp.status_code == 200:
                     data = resp.json()
-                    return data.get("message", {}).get("content", "Désolé, je n'ai pas pu générer une réponse.")
+                    fallback = "Désolé, je n'ai pas pu générer une réponse."
+                    return data.get("message", {}).get("content", fallback)
         except Exception:
             pass
 
@@ -185,8 +189,9 @@ class AIAssistant:
             if failed > 0:
                 return (
                     f"Il y a actuellement {failed} livraison(s) en échec. "
-                    "Je recommande de vérifier les adresses de livraison et de contacter les clients concernés. "
-                    "Vous pouvez aussi réassigner ces commandes à d'autres livreurs."
+                    "Je recommande de vérifier les adresses de livraison "
+                    "et de contacter les clients concernés. "
+                    "Vous pouvez aussi réassigner ces commandes."
                 )
             return "Aucun problème détecté. Toutes les livraisons se déroulent normalement."
 

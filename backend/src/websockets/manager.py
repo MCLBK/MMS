@@ -10,7 +10,7 @@ Gère les canaux :
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import WebSocket
 
@@ -51,12 +51,14 @@ class ConnectionManager:
                     del self._user_sockets[user_id]
 
     async def broadcast(self, channel: str, event: str, data: dict):
-        message = json.dumps({
-            "event": event,
-            "data": data,
-            "channel": channel,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        message = json.dumps(
+            {
+                "event": event,
+                "data": data,
+                "channel": channel,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
         async with self._lock:
             sockets = list(self._channels.get(channel, set()))
 
@@ -71,11 +73,13 @@ class ConnectionManager:
             await self.disconnect(ws)
 
     async def send_to_user(self, user_id: str, event: str, data: dict):
-        message = json.dumps({
-            "event": event,
-            "data": data,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        message = json.dumps(
+            {
+                "event": event,
+                "data": data,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
         async with self._lock:
             sockets = list(self._user_sockets.get(user_id, set()))
 

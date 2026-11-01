@@ -1,7 +1,8 @@
 """Tests unitaires pour le gestionnaire WebSocket."""
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from src.websockets.manager import ConnectionManager
 
