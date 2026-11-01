@@ -6,11 +6,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://mms-backend.onrender.com/api/:path*"
+      "destination": "https://mms-express-api.onrender.com/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "https://mms-backend.onrender.com/ws/:path*"
+      "destination": "https://mms-express-api.onrender.com/ws/:path*"
     }
   ],
   "headers": [
