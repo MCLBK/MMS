@@ -65,10 +65,10 @@ jobs:
           pytest -v --tb=long 2>&1 | tee test-output.txt
           RESULT=${PIPESTATUS[0]}
           if [ $RESULT -ne 0 ]; then
-            echo "## Backend Test Failure" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -100 test-output.txt >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
+            # Write last 50 lines as annotation errors (visible via API)
+            tail -50 test-output.txt | while IFS= read -r line; do
+              echo "::error::$line"
+            done
           fi
           exit $RESULT
 
